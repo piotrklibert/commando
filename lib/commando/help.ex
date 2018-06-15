@@ -28,11 +28,23 @@ defmodule Commando.Help do
   end
 
   defp build_argument_list(state) do
+    get_aliases = fn switch ->
+      ["--#{switch}" | aliases_for(state, switch)] |> Enum.join(", ")
+    end
+
+    args = state.descriptions
+    |> Enum.map(fn {k, v} -> k end)
+    |> Enum.map(get_aliases)
+    help_text_start_col = Enum.max(args |> Enum.map(&String.length/1)) + 2 + String.length("(required)")
     arguments = state.descriptions
     |> Enum.map(fn {switch, desc} ->
-      aliases = ["--#{switch}"] ++ aliases_for(state, switch)
-
-      "  #{Enum.join(aliases, ", ")} : #{required(state, switch)}#{desc}#{default(state, switch)}"
+      aliases = get_aliases.(switch)
+      required = required(state, switch) |> String.downcase()
+      default = default(state, switch) |> String.downcase()
+      alen = String.length(aliases)
+      rlen = String.length(required)
+      padding = (for _ <- 1..(help_text_start_col - alen - rlen), do: " ") |> Enum.join("")
+      ["  ", aliases, padding, required, desc, default] |> Enum.join("")
     end)
     |> Enum.join("\n")
 
